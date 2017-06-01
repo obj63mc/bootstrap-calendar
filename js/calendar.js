@@ -153,6 +153,9 @@ if(!String.prototype.formatNum) {
 		onAfterModalHidden: function(events) {
 			// Inside this function 'this' is the calendar instance
 		},
+		onGetEventsForDay: function(events){
+
+		},
 		// -------------------------------------------------------------
 		// INTERNAL USE ONLY. DO NOT ASSIGN IT WILL BE OVERRIDDEN ANYWAY
 		// -------------------------------------------------------------
@@ -240,13 +243,13 @@ if(!String.prototype.formatNum) {
 		ms10: 'Nov',
 		ms11: 'Dec',
 
-		d0: 'Sunday',
-		d1: 'Monday',
-		d2: 'Tuesday',
-		d3: 'Wednesday',
-		d4: 'Thursday',
-		d5: 'Friday',
-		d6: 'Saturday'
+		d0: 'Sun',
+		d1: 'Mon',
+		d2: 'Tue',
+		d3: 'Wed',
+		d4: 'Thu',
+		d5: 'Fri',
+		d6: 'Sat'
 	};
 
 	var browser_timezone = '';
@@ -721,6 +724,60 @@ if(!String.prototype.formatNum) {
 		return this.options.templates['month-day'](t);
 	}
 
+	Calendar.prototype._dayWeek = function(week, day) {
+		this._loadTemplate('week-day');
+
+		var t = {tooltip: '', cal: this};
+		var cls = this.options.classes.months.outmonth;
+
+		var firstday = this.options.position.start.getDay();
+		if(getExtentedOption(this, 'first_day') == 2) {
+			firstday++;
+		} else {
+			firstday = (firstday == 0 ? 7 : firstday);
+		}
+
+		day = (day - firstday) + 1;
+		var curdate = new Date(this.options.position.start.getFullYear(), this.options.position.start.getMonth(), day, 0, 0, 0);
+
+		// if day of the current month
+		if(day > 0) {
+			cls = this.options.classes.months.inmonth;
+		}
+		// stop cycling table rows;
+		var daysinmonth = (new Date(this.options.position.end.getTime() - 1)).getDate();
+		if((day + 1) > daysinmonth) {
+			this.stop_cycling = true;
+		}
+		// if day of the next month
+		if(day > daysinmonth) {
+			day = day - daysinmonth;
+			cls = this.options.classes.months.outmonth;
+		}
+
+		cls = $.trim(cls + " " + this._getDayClass("months", curdate));
+
+		if(day <= 0) {
+			var daysinprevmonth = (new Date(this.options.position.start.getFullYear(), this.options.position.start.getMonth(), 0)).getDate();
+			day = daysinprevmonth - Math.abs(day);
+			cls += ' cal-month-first-row';
+		}
+
+		var holiday = this._getHoliday(curdate);
+		if(holiday !== false) {
+			t.tooltip = holiday;
+		}
+
+		t.data_day = curdate.getFullYear() + '-' + curdate.getMonthFormatted() + '-' + (day < 10 ? '0' + day : day);
+		t.cls = cls;
+		t.day = day;
+
+		t.start = parseInt(curdate.getTime());
+		t.end = parseInt(t.start + 86400000);
+		t.events = this.getEventsBetween(t.start, t.end);
+		return this.options.templates['week-day'](t);
+	}
+
 	Calendar.prototype._getHoliday = function(date) {
 		var result = false;
 		$.each(getHolidays(this, date.getFullYear()), function() {
@@ -1033,15 +1090,11 @@ if(!String.prototype.formatNum) {
 
 		$('*[data-toggle="tooltip"]').tooltip({container: this.options.tooltip_container});
 
-		$('*[data-cal-date]').click(function() {
-			var view = $(this).data('cal-view');
-			self.options.day = $(this).data('cal-date');
-			self.view(view);
-		});
-		$('.cal-cell').dblclick(function() {
-			var view = $('[data-cal-date]', this).data('cal-view');
-			self.options.day = $('[data-cal-date]', this).data('cal-date');
-			self.view(view);
+		$('.cal-cell').click(function(e) {
+			e.preventDefault();
+			var event_list = $('.events-list', this);
+			var events = self.getEventsBetween(parseInt(event_list.data('cal-start')), parseInt(event_list.data('cal-end')));
+			self.options.onGetEventsForDay.call(self, events);
 		});
 
 		this['_update_' + this.options.view]();
@@ -1138,6 +1191,14 @@ if(!String.prototype.formatNum) {
 	};
 
 	Calendar.prototype._update_week = function() {
+		var self = this;
+
+		self.context.find('a.event').mouseenter(function() {
+			$('a[data-event-id="' + $(this).data('event-id') + '"]').closest('.cal-cell1').addClass('day-highlight dh-' + $(this).data('event-class'));
+		});
+		self.context.find('a.event').mouseleave(function() {
+			$('div.cal-cell1').removeClass('day-highlight dh-' + $(this).data('event-class'));
+		});
 	};
 
 	Calendar.prototype._update_year = function() {

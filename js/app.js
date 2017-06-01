@@ -8,6 +8,15 @@
 		tmpl_path: 'tmpls/',
 		tmpl_cache: false,
 		day: '2013-03-12',
+		time_start:'00:00',
+		time_end:'23:59',
+		views:{
+			month:{
+				slide_events:0
+			}
+		},
+		weekbox:false,
+		display_week_numbers:false,
 		onAfterEventsLoad: function(events) {
 			if(!events) {
 				return;
@@ -22,9 +31,12 @@
 			});
 		},
 		onAfterViewLoad: function(view) {
-			$('.page-header h3').text(this.getTitle());
+			$('.page-header h3').text(this.getMonth() +' '+ this.getYear());
 			$('.btn-group button').removeClass('active');
 			$('button[data-calendar-view="' + view + '"]').addClass('active');
+		},
+		onGetEventsForDay: function(events){
+			console.log(events);
 		},
 		classes: {
 			months: {

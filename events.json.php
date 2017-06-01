@@ -7,7 +7,8 @@
 			"url": "http://www.example.com/",
 			"class": "event-warning",
 			"start": "1362938400000",
-			"end":   "1363197686300"
+			"end":   "1363197686300",
+			"multiday": true
 		},
 		{
 			"id": "256",
